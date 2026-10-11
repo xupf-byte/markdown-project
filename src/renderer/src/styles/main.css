@@ -127,6 +127,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* 兜底：任何内容都不许溢出到工作区那一侧（否则会被 .workbench 白底盖住） */
+  overflow: hidden;
 }
 
 .workbench {
@@ -186,6 +188,13 @@ body {
   align-items: center;
   gap: 6px;
   padding: 10px 10px 8px;
+  /* 一行放不下时换行，绝不向外溢出（否则最后几个按钮会被工作区盖住） */
+  flex-wrap: wrap;
+}
+/* Element Plus 给相邻按钮加的 margin-left:12px 会和 flex gap 叠加，
+   6 个图标按钮在 282px 侧边栏里会溢出 11px → 这里只留 gap。 */
+.side-head .el-button + .el-button {
+  margin-left: 0;
 }
 .side-actions {
   display: flex;
@@ -369,6 +378,73 @@ body {
 .tb-btn.is-on {
   background: var(--accent-soft);
   color: var(--accent);
+}
+/* 工具栏里的「A」按钮：下方色条反映当前字体颜色 */
+.tb-color-a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-weight: 700;
+  font-size: 13px;
+}
+.tb-color-a::after {
+  content: '';
+  display: block;
+  width: 13px;
+  height: 3px;
+  margin-top: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+/* 背景色按钮：一个小色块 */
+.tb-color-bg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--border-strong);
+}
+/* ---------------- 调色板 ---------------- */
+
+.color-pop .color-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.color-pop .color-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+}
+.color-pop .color-swatch {
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.08s ease;
+}
+.color-pop .color-swatch:hover {
+  transform: scale(1.12);
+  border-color: var(--accent);
+}
+.color-pop .color-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.color-pop .color-row .el-color-picker {
+  height: 24px;
+}
+.color-pop .color-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
 }
 
 /* ---------------- 编辑区 ---------------- */

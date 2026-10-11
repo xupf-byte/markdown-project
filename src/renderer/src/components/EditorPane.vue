@@ -34,7 +34,7 @@ function applyEdit(fn: (t: string, s: number, e: number) => ops.EditResult) {
   })
 }
 
-function handleCmd(name: string) {
+function handleCmd(name: string, value?: string) {
   const el = ta.value
   switch (name) {
     case 'bold':
@@ -48,6 +48,12 @@ function handleCmd(name: string) {
       break
     case 'code':
       applyEdit((t, s, e) => ops.wrapInline(t, s, e, '`', '`', 'code'))
+      break
+    case 'color':
+      applyEdit((t, s, e) => ops.applyInlineStyle(t, s, e, 'color', value ?? ''))
+      break
+    case 'bgcolor':
+      applyEdit((t, s, e) => ops.applyInlineStyle(t, s, e, 'background-color', value ?? ''))
       break
     case 'h1':
     case 'h2':

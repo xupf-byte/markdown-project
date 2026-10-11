@@ -61,8 +61,8 @@ async function onOutlineJump(id: string, line: number) {
 
 /* ---------------- 工具栏 ---------------- */
 
-function onToolbarCmd(name: string) {
-  editorRef.value?.handleCmd(name)
+function onToolbarCmd(name: string, value?: string) {
+  editorRef.value?.handleCmd(name, value)
 }
 
 /* ---------------- 当前节点操作 ---------------- */
