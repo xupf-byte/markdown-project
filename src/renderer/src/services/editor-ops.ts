@@ -131,6 +131,44 @@ export function insertBlock(
   return { text: inserted, selStart: base + block.length, selEnd: base + block.length }
 }
 
+/**
+ * 代码围栏（``` 开始 / ``` 结束）。
+ *
+ * - 有选中内容：用围栏包裹选中内容并保留原文，选完仍选中这段内容，方便继续调整
+ * - 无选中内容：插入一对空围栏，光标落在围栏内的空行上（不是落在语言名里）
+ *
+ * `lang` 为空时插入不带语言标记的 ```，否则插入 ```lang。
+ */
+export function wrapFence(text: string, start: number, end: number, lang = ''): EditResult {
+  const fence = '```' + lang
+  const sel = text.slice(start, end)
+
+  if (!sel) {
+    const needsLeading = start > 0 && text[start - 1] !== '\n'
+    const leading = needsLeading ? '\n\n' : ''
+    // 空围栏：```lang \n 空行 \n ```
+    const payload = `${leading}${fence}\n\n\`\`\`\n`
+    const caret = start + leading.length + fence.length + 1
+    return {
+      text: text.slice(0, start) + payload + text.slice(end),
+      selStart: caret,
+      selEnd: caret
+    }
+  }
+
+  // 围栏必须独占一行：前面不在行首就补换行，后面不在行首也补换行
+  const head = (start > 0 && text[start - 1] !== '\n' ? '\n' : '') + fence + '\n'
+  const after = text.slice(end)
+  const tail = after.startsWith('\n') ? '\n```' : after ? '\n```\n' : '\n```'
+  const bodyStart = start + head.length
+
+  return {
+    text: text.slice(0, start) + head + sel + tail + after,
+    selStart: bodyStart,
+    selEnd: bodyStart + sel.length
+  }
+}
+
 /** 行内样式（字体颜色 / 背景色）支持的属性 */
 export type StyleProp = 'color' | 'background-color'
 
@@ -268,5 +306,3 @@ E = mc^2
 $$`
 
 export const MERMAID_SNIPPET = '```mermaid\ngraph LR\n  A[开始] --> B[结束]\n```'
-
-export const CODE_SNIPPET = '```js\n\n```'

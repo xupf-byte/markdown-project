@@ -21,8 +21,7 @@ function run(name: string, value?: string) {
 const inlines: { cmd: string; label: string; title: string }[] = [
   { cmd: 'bold', label: 'B', title: '加粗 ⌘B' },
   { cmd: 'italic', label: 'I', title: '斜体 ⌘I' },
-  { cmd: 'strike', label: 'S', title: '删除线' },
-  { cmd: 'code', label: '</>', title: '行内代码 ⌘`' }
+  { cmd: 'strike', label: 'S', title: '删除线' }
 ]
 
 const headings = [
@@ -205,7 +204,10 @@ function pickBg(c: string | null) {
     <button class="tb-btn" title="表格" @click="run('table')">
       <el-icon :size="15"><Grid /></el-icon>
     </button>
-    <button class="tb-btn" title="代码块" @click="run('codeblock')">
+    <button class="tb-btn" title="代码块（``` 围栏）" @click="run('codefence')">
+      <span style="font-family: var(--mono); font-size: 11px">&lt;/&gt;</span>
+    </button>
+    <button class="tb-btn" title="代码块（带语言标记）" @click="run('codeblock')">
       <span style="font-family: var(--mono); font-size: 11px">{ }</span>
     </button>
     <button class="tb-btn" title="数学公式" @click="run('math')">∑</button>

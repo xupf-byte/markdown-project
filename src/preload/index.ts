@@ -35,6 +35,9 @@ const api = {
   stat: (rel: string): Promise<StatResult | null> => ipcRenderer.invoke('fs:stat', rel),
   exists: (rel: string): Promise<boolean> => ipcRenderer.invoke('fs:exists', rel),
 
+  /* 系统剪贴板（预览区复制代码用） */
+  writeClipboard: (text: string): Promise<void> => ipcRenderer.invoke('clipboard:write', text),
+
   /* 系统对话框 */
   saveText: (name: string, content: string, ext: string): Promise<string | null> =>
     ipcRenderer.invoke('dialog:saveText', name, content, ext),

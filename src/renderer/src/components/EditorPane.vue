@@ -24,13 +24,18 @@ const fontStyle = computed(() => ({ fontSize: `${settings.fontSize}px` }))
 function applyEdit(fn: (t: string, s: number, e: number) => ops.EditResult) {
   const el = ta.value
   if (!el) return
+  /* 记录滚动位置：v-model 赋值后 textarea 的光标会被移到文本末尾，
+     此时若先 focus()，浏览器会为了露出「末尾光标」把视口滚到文档底部。 */
+  const prevTop = el.scrollTop
   const res = fn(vault.content, el.selectionStart, el.selectionEnd)
   vault.setContent(res.text)
   const start = res.selStart
   const end = res.selEnd
   nextTick(() => {
-    el.focus()
+    // 顺序不能反：先设选区再 focus，focus 时视口跟的是正确光标而不是末尾
     el.setSelectionRange(start, end)
+    el.focus()
+    el.scrollTop = prevTop
   })
 }
 
@@ -88,7 +93,10 @@ function handleCmd(name: string, value?: string) {
       applyEdit((t, s, e) => ops.insertBlock(t, s, e, ops.MERMAID_SNIPPET))
       break
     case 'codeblock':
-      applyEdit((t, s, e) => ops.insertBlock(t, s, e, ops.CODE_SNIPPET, [4, 4]))
+      applyEdit((t, s, e) => ops.wrapFence(t, s, e, 'js'))
+      break
+    case 'codefence':
+      applyEdit((t, s, e) => ops.wrapFence(t, s, e))
       break
     case 'hr':
       applyEdit((t, s, e) => ops.insertBlock(t, s, e, '---'))
@@ -179,12 +187,15 @@ function continueList(): boolean {
   else if (m[4]) marker = `${m[4]} `
   else marker = `${Number(m[5]) + 1}. `
 
+  const prevTop = el.scrollTop
   const insert = `\n${indent}${marker}`
   vault.setContent(text.slice(0, pos) + insert + text.slice(el.selectionEnd))
   const caret = pos + insert.length
   nextTick(() => {
     el.setSelectionRange(caret, caret)
-    el.scrollTop = el.scrollHeight
+    /* 原来这里写死 scrollTop = scrollHeight，长文档里续写列表会整篇跳到底部；
+       保持原滚动位置即可，后续输入时浏览器会自行把光标带进视口。 */
+    el.scrollTop = prevTop
   })
   return true
 }
@@ -260,8 +271,38 @@ watch(
   }
 )
 
+/* ---------------- 换文档归零 ---------------- */
+
+/**
+ * 切换文档时必须显式回到顶部。
+ *
+ * 原因：给 textarea.value 赋值会把光标移到文本末尾（HTML 规范行为），
+ * 滚动位置又沿用上一篇文档的 scrollTop，于是打开新文档常常直接落在底部；
+ * 分栏模式下预览区被 clamp 后还会通过滚动比例把编辑区再往底部带一次。
+ *
+ * 监听 contentEpoch 而不是 currentId：重命名只换 id、内容没变，
+ * 不应该把正在看的长文档弹回开头。
+ */
+watch(
+  () => vault.contentEpoch,
+  () => {
+    nextTick(() => {
+      const el = ta.value
+      if (!el) return
+      el.setSelectionRange(0, 0)
+      el.scrollTop = 0
+    })
+  }
+)
+
 onMounted(() => {
-  nextTick(() => ta.value?.focus())
+  nextTick(() => {
+    const el = ta.value
+    if (!el) return
+    el.setSelectionRange(0, 0)
+    el.scrollTop = 0
+    el.focus()
+  })
 })
 </script>
 

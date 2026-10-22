@@ -67,6 +67,13 @@ export const useVaultStore = defineStore('vault', {
 
     /** 编辑区跳转到指定行的请求 */
     jumpLine: 0,
+    /**
+     * 每次「真正换了一篇文档」时自增，供编辑区 / 预览区复位到顶部。
+     *
+     * 不能直接监听 currentId：重命名（renameNode）也会改 id 而内容不变，
+     * 那样会把正在阅读的长文档弹回开头。
+     */
+    contentEpoch: 0,
     statusText: ''
   }),
 
@@ -211,6 +218,7 @@ export const useVaultStore = defineStore('vault', {
     /* ---------------- 打开 / 切换 ---------------- */
 
     async open(id: string) {
+      const switched = this.currentId !== id
       if (isExternalId(id)) {
         const doc = this.externalMap[id]
         if (!doc) return
@@ -228,6 +236,7 @@ export const useVaultStore = defineStore('vault', {
             this.patchExternal(id, { missing: true })
           }
         }
+        if (switched) this.contentEpoch++
         this.renderNow()
         return
       }
@@ -236,6 +245,7 @@ export const useVaultStore = defineStore('vault', {
       this.currentId = id
       const draft = this.buffers[id]
       this.content = draft != null ? draft : await storage.read(id)
+      if (switched) this.contentEpoch++
       this.renderNow()
     },
 

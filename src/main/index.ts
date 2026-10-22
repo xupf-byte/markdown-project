@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeTheme } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu, shell, nativeTheme, clipboard } from 'electron'
 import { promises as fs } from 'fs'
 import path from 'path'
 
@@ -501,6 +501,11 @@ function registerIpc(): void {
 
   ipcMain.handle('shell:showItem', async (_e, rel: string) => {
     shell.showItemInFolder(safeJoin(rel))
+  })
+
+  /* 预览区「复制代码」：由主进程写剪贴板，避免渲染进程的权限限制 */
+  ipcMain.handle('clipboard:write', (_e, text: string) => {
+    clipboard.writeText(String(text ?? ''))
   })
 
   ipcMain.handle('theme:set', async (_e, theme: 'light' | 'dark' | 'system') => {
