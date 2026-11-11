@@ -246,6 +246,28 @@ body {
   text-overflow: ellipsis;
   flex: 1;
 }
+/* 内联重命名输入框：与 .label 同字号同高度，避免进入编辑时整行跳动 */
+.tree-node .rename-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  padding: 0 5px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--text-1);
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-soft);
+  user-select: text;
+}
+.tree-node.is-editing {
+  background: var(--bg-hover);
+  cursor: default;
+}
 .tree-node .row-actions {
   display: none;
   align-items: center;

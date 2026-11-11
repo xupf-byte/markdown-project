@@ -32,6 +32,7 @@ provide(TREE_CTX, {
   activeId: computed(() => vault.currentId),
   expanded: computed(() => vault.expanded),
   dirtyIds: computed(() => vault.dirtyIds),
+  renamingId: computed(() => vault.renamingId),
   dragId,
 
   onOpen(node) {
@@ -45,29 +46,38 @@ provide(TREE_CTX, {
   onNewDoc(parentId) {
     vault
       .createNode('file', parentId)
-      .then(() => ElMessage.success('已新建文档'))
+      .then((id) => {
+        ElMessage.success('已新建文档')
+        // 新建后直接进入改名态，省掉「再双击一次」
+        if (id) vault.beginRename(id)
+      })
       .catch((e) => ElMessage.error(String(e?.message ?? e)))
   },
 
   onNewFolder(parentId) {
     vault
       .createNode('folder', parentId)
-      .then(() => ElMessage.success('已新建文件夹'))
+      .then((id) => {
+        ElMessage.success('已新建文件夹')
+        if (id) vault.beginRename(id)
+      })
       .catch((e) => ElMessage.error(String(e?.message ?? e)))
   },
 
-  async onRename(node) {
+  /** 进入内联重命名态；真正落盘在 onCommitRename */
+  onRename(node) {
+    vault.beginRename(node.id)
+  },
+
+  onEndRename() {
+    vault.endRename()
+  },
+
+  async onCommitRename(node, name) {
     try {
-      const { value } = await ElMessageBox.prompt('输入新的名称', '重命名', {
-        inputValue: node.name,
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        inputValidator: (v: string) => (v && v.trim() ? true : '名称不能为空')
-      })
-      await vault.renameNode(node.id, value.trim())
-      ElMessage.success('已重命名')
+      await vault.renameNode(node.id, name)
     } catch (e: any) {
-      if (e !== 'cancel' && e?.message) ElMessage.error(String(e.message))
+      ElMessage.error(String(e?.message ?? e))
     }
   },
 
@@ -154,7 +164,12 @@ async function onRootDrop(e: DragEvent) {
 }
 
 function newNode(type: 'file' | 'folder') {
-  vault.createNode(type, null)
+  vault
+    .createNode(type, null)
+    .then((id) => {
+      if (id) vault.beginRename(id)
+    })
+    .catch((e) => ElMessage.error(String(e?.message ?? e)))
 }
 
 async function doImport() {

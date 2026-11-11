@@ -70,17 +70,8 @@ function onToolbarCmd(name: string, value?: string) {
 async function renameCurrent() {
   const node = vault.currentNode
   if (!node) return
-  try {
-    const { value } = await ElMessageBox.prompt('输入新的名称', '重命名', {
-      inputValue: node.name,
-      confirmButtonText: '确定',
-      cancelButtonText: '取消'
-    })
-    await vault.renameNode(node.id, value.trim())
-    ElMessage.success('已重命名')
-  } catch (e: any) {
-    if (e !== 'cancel' && e?.message) ElMessage.error(String(e.message))
-  }
+  // 与双击、右键菜单共用同一套内联编辑框（自动全选名称）
+  vault.beginRename(node.id)
 }
 
 async function deleteCurrent() {
@@ -102,13 +93,21 @@ async function deleteCurrent() {
 /* ---------------- 菜单 / 快捷键 ---------------- */
 
 async function runAction(action: string) {
+  // 内联改名进行中：会弹窗或改动树的动作一律不响应。
+  // 关键一条是 delete —— 主进程菜单加速器 Cmd+Backspace 会直接派发到渲染层，
+  // 用户在输入框里删字就会弹出「移入回收站」确认框。
+  if (vault.renamingId && ['rename', 'delete', 'new-doc', 'new-folder'].includes(action)) return
   switch (action) {
-    case 'new-doc':
-      await vault.createNode('file', null)
+    case 'new-doc': {
+      const id = await vault.createNode('file', null)
+      if (id) vault.beginRename(id)
       break
-    case 'new-folder':
-      await vault.createNode('folder', null)
+    }
+    case 'new-folder': {
+      const id = await vault.createNode('folder', null)
+      if (id) vault.beginRename(id)
       break
+    }
     case 'rename':
       await renameCurrent()
       break

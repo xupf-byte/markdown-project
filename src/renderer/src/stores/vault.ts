@@ -44,6 +44,13 @@ export const useVaultStore = defineStore('vault', {
     expanded: [] as string[],
     allTags: [] as { tag: string; count: number }[],
 
+    /**
+     * 正在内联重命名的节点 id（空串 = 无）。
+     * 双击节点、右键「重命名」、F2 都只是把它设成一个 id，
+     * 由 TreeNode 自己渲染输入框 —— 三个入口共用一套 UI。
+     */
+    renamingId: '',
+
     currentId: '',
     openTabs: [] as string[],
 
@@ -213,6 +220,13 @@ export const useVaultStore = defineStore('vault', {
       if (!storage) return
       this.tree = await storage.tree()
       this.allTags = storage.allTags()
+      // 树重建后目标节点若已不存在（外部改动 / 改名后换 id / 被删），自动退出编辑态，
+      // 否则会留下一个永远不会再渲染的空输入框状态。
+      if (this.renamingId) {
+        const exists = (list: DocNode[]): boolean =>
+          list.some((n) => n.id === this.renamingId || (n.type === 'folder' && exists(n.children)))
+        if (!exists(this.tree)) this.renamingId = ''
+      }
     },
 
     /* ---------------- 打开 / 切换 ---------------- */
@@ -274,6 +288,16 @@ export const useVaultStore = defineStore('vault', {
 
     /* ---------------- 新建 / 重命名 / 移动 / 删除 ---------------- */
 
+    /** 进入内联重命名态 */
+    beginRename(id: string) {
+      this.renamingId = id
+    },
+
+    /** 退出内联重命名态 */
+    endRename() {
+      this.renamingId = ''
+    },
+
     async createNode(type: NodeType, parentId: string | null = null, name?: string) {
       if (!storage) return null
       const defaultName = type === 'folder' ? '新建文件夹' : '未命名文档'
@@ -299,6 +323,7 @@ export const useVaultStore = defineStore('vault', {
         }
       }
       this.openTabs = this.openTabs.map((t) => (t === id ? newId : t))
+      if (this.renamingId === id) this.renamingId = ''
     },
 
     async moveNode(id: string, newParentId: string | null) {
