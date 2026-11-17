@@ -264,19 +264,71 @@ export const useVaultStore = defineStore('vault', {
     },
 
     async closeTab(id: string) {
-      if (this.buffers[id] != null) await this.save(id)
-      this.openTabs = this.openTabs.filter((t) => t !== id)
-      if (isExternalId(id)) this.forgetExternal(id)
-      if (this.currentId === id) {
-        const next = this.openTabs[this.openTabs.length - 1]
-        if (next) await this.open(next)
-        else {
-          this.currentId = ''
-          this.content = ''
-          this.renderedHtml = ''
-          this.outline = []
+      return this.closeTabs([id])
+    },
+
+    /**
+     * 批量关闭标签。
+     *
+     * 先逐个把脏缓冲区落盘，再一次性从 openTabs 移除，最后只做一次「切到哪个标签」的
+     * 决策 —— 循环调用 closeTab 会在中途反复触发 open()/重渲染，标签一多就明显卡顿，
+     * 编辑器也会连闪好几下。
+     *
+     * 保存失败的标签不关闭（内容还在 buffers 里，再打开能恢复），
+     * 其余照常关闭，避免一个写失败把整批操作卡死。
+     *
+     * @param anchor 当前页被关掉时优先激活它（一般是右键的那一个标签）
+     */
+    async closeTabs(ids: string[], anchor?: string) {
+      const closing = new Set(ids.filter((id) => this.openTabs.includes(id)))
+      if (!closing.size) return
+
+      for (const id of [...closing]) {
+        if (this.buffers[id] == null) continue
+        try {
+          await this.save(id)
+        } catch {
+          closing.delete(id)
         }
       }
+      if (!closing.size) return
+
+      this.openTabs = this.openTabs.filter((t) => !closing.has(t))
+      for (const id of closing) if (isExternalId(id)) this.forgetExternal(id)
+
+      if (!closing.has(this.currentId)) return
+
+      const next =
+        anchor && this.openTabs.includes(anchor)
+          ? anchor
+          : this.openTabs[this.openTabs.length - 1]
+      if (next) {
+        await this.open(next)
+      } else {
+        this.currentId = ''
+        this.content = ''
+        this.renderedHtml = ''
+        this.outline = []
+      }
+    },
+
+    /** 关闭全部标签 */
+    closeAllTabs() {
+      return this.closeTabs([...this.openTabs])
+    },
+
+    /** 关闭 id 左侧的全部标签 */
+    closeTabsLeft(id: string) {
+      const i = this.openTabs.indexOf(id)
+      if (i <= 0) return Promise.resolve()
+      return this.closeTabs(this.openTabs.slice(0, i), id)
+    },
+
+    /** 关闭 id 右侧的全部标签 */
+    closeTabsRight(id: string) {
+      const i = this.openTabs.indexOf(id)
+      if (i < 0) return Promise.resolve()
+      return this.closeTabs(this.openTabs.slice(i + 1), id)
     },
 
     closeOtherTabs(id: string) {

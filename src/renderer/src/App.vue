@@ -237,10 +237,17 @@ function onGlobalKeydown(e: KeyboardEvent) {
 
 /* ---------------- 右键菜单 ---------------- */
 
+interface CtxMenuItem {
+  label: string
+  run: () => void
+  /** 置灰不可点（例如「关闭左边」在第一个标签上没有意义） */
+  disabled?: boolean
+}
+
 interface CtxMenu {
   x: number
   y: number
-  menu: { label: string; run: () => void }[]
+  menu: CtxMenuItem[]
 }
 const ctx = ref<CtxMenu | null>(null)
 
@@ -263,7 +270,8 @@ const ctxStyle = computed(() => {
   }
 })
 
-function runCtx(item: { run: () => void }) {
+function runCtx(item: CtxMenuItem) {
+  if (item.disabled) return
   closeCtx()
   item.run()
 }
@@ -363,7 +371,14 @@ onBeforeUnmount(() => {
       :style="ctxStyle"
       @click.stop
     >
-      <button v-for="(item, i) in ctx.menu" :key="i" class="ctx-item" @click="runCtx(item)">
+      <button
+        v-for="(item, i) in ctx.menu"
+        :key="i"
+        class="ctx-item"
+        :class="{ 'is-disabled': item.disabled }"
+        :disabled="item.disabled"
+        @click="runCtx(item)"
+      >
         {{ item.label }}
       </button>
     </div>
@@ -415,5 +430,11 @@ onBeforeUnmount(() => {
 }
 .ctx-item:hover {
   background: var(--bg-hover);
+}
+.ctx-item.is-disabled,
+.ctx-item.is-disabled:hover {
+  color: var(--text-3);
+  background: transparent;
+  cursor: default;
 }
 </style>
